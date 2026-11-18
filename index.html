@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-<title>選舉民調得票試算器（通用版）</title>
+<title>選舉結果預測</title>
 <meta name="theme-color" content="#1c2230">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="mobile-web-app-capable" content="yes">
@@ -85,8 +85,8 @@ footer{font-size:.7rem;color:var(--sub);text-align:center;line-height:1.6;margin
 </head>
 <body>
 <div class="wrap">
-  <h1 id="h1">📊 選舉民調得票試算器</h1>
-  <p class="lead" id="leadSrc">輸入任何縣市、任何選舉的民調數字，換算成票數<br>試算結果只是數學換算，不代表選舉預測</p>
+  <h1 id="h1">📊 選舉結果預測</h1>
+  <p class="lead" id="leadSrc">輸入任何縣市、任何選舉的民調數字，換算成票數<br>依民調數字試算，僅供參考</p>
 
   <!-- 0. 基本設定 -->
   <div class="card">
@@ -348,9 +348,9 @@ footer{font-size:.7rem;color:var(--sub);text-align:center;line-height:1.6;margin
     S.lvOn=$('lvOn').checked; S.lvTurn=$('lvTurn').checked;
     S.w=[f($('w1').value,90),f($('w2').value,55),f($('w3').value,15)];
 
-    $('h1').textContent='📊 '+(S.title||'選舉民調得票試算器');
-    $('leadSrc').innerHTML=(S.source?esc(S.source)+'<br>':'輸入任何縣市、任何選舉的民調數字，換算成票數<br>')+'試算結果只是數學換算，不代表選舉預測';
-    document.title=(S.title||'選舉民調')+'・得票試算';
+    $('leadSrc').innerHTML=(S.title?'<b style="color:var(--ink);font-size:.95rem">'+esc(S.title)+'</b><br>':'')
+      +(S.source?esc(S.source)+'<br>':(S.title?'':'輸入任何縣市、任何選舉的民調數字，換算成票數<br>'))+'依民調數字試算，僅供參考';
+    document.title='選舉結果預測'+(S.title?'・'+S.title:'');
 
     const e=f(S.e,0), n=f(S.n,1000), r=S.r/100, lv=S.lvOn, lvTurn=lv&&S.lvTurn, one=S.lvMode==='one';
     $('lvBox').classList.toggle('off',!lv);
@@ -526,7 +526,7 @@ footer{font-size:.7rem;color:var(--sub);text-align:center;line-height:1.6;margin
     ctx.font=`700 30px ${FONT}`;
     ctx.fillText(fitText(ctx,R.diff2,W-120),W/2,yD+48);
     ctx.fillStyle='#8a92a3'; ctx.font=`400 24px ${FONT}`;
-    ctx.fillText(fitText(ctx,`投票率 ${R.turnout}${R.lv?'｜已含投票意願加權':''}｜試算結果只是數學換算，不代表選舉預測`,W-80),W/2,yD+108);
+    ctx.fillText(fitText(ctx,`投票率 ${R.turnout}${R.lv?'｜已含投票意願加權':''}｜依民調數字試算，僅供參考`,W-80),W/2,yD+108);
   }
 
   const shareMsg=t=>{ $('shareMsg').textContent=t; clearTimeout(shareMsg.tm); shareMsg.tm=setTimeout(()=>$('shareMsg').textContent='',4000); };
@@ -558,7 +558,7 @@ footer{font-size:.7rem;color:var(--sub);text-align:center;line-height:1.6;margin
     const lines=[`📊 ${R.title}`];
     if (R.source) lines.push(R.source);
     R.items.forEach((it,k)=>lines.push(`${k+1}. ${it.name}：${(it.share*100).toFixed(2)}%`+(R.hasE?`（${fmt(it.votes)} 票）`:'')));
-    lines.push(R.diff, `投票率 ${R.turnout}${R.lv?'，已含投票意願加權':''}`, '※ 試算結果只是數學換算，不代表選舉預測');
+    lines.push(R.diff, `投票率 ${R.turnout}${R.lv?'，已含投票意願加權':''}`, '※ 依民調數字試算，僅供參考');
     if (/^https:/.test(location.href) && location.hostname.endsWith('github.io')) lines.push(location.origin+location.pathname);
     const url='https://line.me/R/share?text='+encodeURIComponent(lines.join('\n'));
     const w=window.open(url,'_blank');
