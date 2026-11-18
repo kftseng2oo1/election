@@ -1,0 +1,495 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>選舉民調得票試算器（通用版）</title>
+<meta name="theme-color" content="#1c2230">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="選情試算">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
+<link rel="icon" type="image/png" href="icon-192.png">
+<style>
+:root{--bg:#f5f6f8;--card:#fff;--ink:#1c2230;--sub:#5d6677;--line:#e3e6ec;--accent:#c47f00}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);
+  font-family:-apple-system,BlinkMacSystemFont,"PingFang TC","Noto Sans TC","Microsoft JhengHei",sans-serif;
+  padding:calc(16px + env(safe-area-inset-top)) calc(12px + env(safe-area-inset-right)) calc(24px + env(safe-area-inset-bottom)) calc(12px + env(safe-area-inset-left));
+  -webkit-text-size-adjust:100%}
+.wrap{max-width:960px;margin:0 auto}
+h1{font-size:1.35rem;margin:4px 0;text-align:center}
+.lead{font-size:.78rem;color:var(--sub);text-align:center;margin:0 0 16px;line-height:1.6}
+.card{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:16px;margin-bottom:14px}
+h2{font-size:1rem;margin:0 0 12px;display:flex;align-items:center;gap:8px}
+h2::before{content:"";width:4px;height:18px;border-radius:2px;background:var(--accent)}
+h3{font-size:.85rem;margin:16px 0 8px;color:var(--sub)}
+.pills{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:10px}
+.pills button,.btn{border:1px solid var(--line);background:#fafbfc;border-radius:999px;padding:7px 12px;font-size:.8rem;cursor:pointer;color:var(--ink)}
+.pills button.on{background:var(--ink);color:#fff;border-color:var(--ink)}
+.btn.dark{background:var(--ink);color:#fff;border-color:var(--ink)}
+.grid{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+@media(max-width:640px){.grid{grid-template-columns:1fr}}
+.field label{display:flex;justify-content:space-between;font-size:.82rem;font-weight:600;margin-bottom:6px;gap:6px}
+.field label .v{font-variant-numeric:tabular-nums;color:var(--accent)}
+.field small{display:block;color:var(--sub);font-size:.72rem;margin-top:4px;line-height:1.5}
+input[type=range]{width:100%;accent-color:var(--ink)}
+input[type=range]:disabled{opacity:.35}
+input[type=number],input[type=text],textarea{width:100%;padding:9px 10px;border:1px solid var(--line);border-radius:8px;font-size:16px;font-variant-numeric:tabular-nums;background:#fff;font-family:inherit;color:var(--ink)}
+input:disabled{background:#f1f2f5;color:#999}
+input[type=color]{width:34px;height:34px;border:none;background:none;padding:0;cursor:pointer}
+.num3{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
+.num3 .field label{font-size:.75rem}
+.tw{overflow-x:auto;-webkit-overflow-scrolling:touch}
+table{width:100%;border-collapse:collapse;font-size:.8rem;font-variant-numeric:tabular-nums}
+th,td{padding:7px 6px;border-bottom:1px solid var(--line);text-align:right;white-space:nowrap;vertical-align:middle}
+th:first-child,td:first-child{text-align:left}
+th{background:#f3f4f7;font-weight:600;color:var(--sub);font-size:.75rem}
+td input[type=number]{width:72px;padding:6px;text-align:right}
+td input[type=text]{width:150px;padding:6px}
+tr.cur td{background:#fff7e6;font-weight:700}
+tr.fixed td{background:#fafbfc}
+.del{border:none;background:none;color:#b33;font-size:1.1rem;cursor:pointer;padding:4px}
+.bar{display:flex;height:34px;border-radius:8px;overflow:hidden;margin:6px 0 4px;background:#eee}
+.bar div{display:flex;align-items:center;justify-content:center;color:#fff;font-size:.75rem;font-weight:700;white-space:nowrap;overflow:hidden;transition:width .25s}
+.cands{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:10px;margin-top:14px}
+.cand{border-radius:12px;padding:12px 14px;border-left:6px solid}
+.cand .name{font-weight:700;font-size:.88rem}
+.cand .votes{font-size:1.45rem;font-weight:800;margin:4px 0 2px;font-variant-numeric:tabular-nums}
+.cand .pct{font-size:.78rem;color:var(--sub)}
+.diff{background:var(--ink);color:#fff;border-radius:12px;padding:14px;text-align:center;margin-top:12px}
+.diff .t{font-size:.72rem;opacity:.7}
+.diff .d{font-size:1.3rem;font-weight:800;margin-top:4px}
+.stats{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-top:12px}
+@media(max-width:560px){.stats{grid-template-columns:1fr}}
+.stat{background:#fafbfc;border:1px solid var(--line);border-radius:10px;padding:10px}
+.stat .k{font-size:.72rem;color:var(--sub)}
+.stat .x{font-size:1.05rem;font-weight:700;margin-top:2px;font-variant-numeric:tabular-nums}
+.stat .n{font-size:.7rem;color:var(--sub);margin-top:2px;line-height:1.4}
+.note{font-size:.72rem;color:var(--sub);line-height:1.6;margin-top:8px}
+.warn{background:#fff7e6;border:1px solid #f1d9a6;border-radius:8px;padding:8px 10px;font-size:.75rem;color:#7a5200;margin-top:10px;line-height:1.6}
+.chk{display:flex;align-items:center;gap:8px;font-size:.85rem;font-weight:600;cursor:pointer}
+.chk input{width:18px;height:18px;accent-color:var(--ink)}
+.off{opacity:.4;pointer-events:none}
+.lean{display:flex;flex-wrap:wrap;align-items:center;gap:6px;font-size:.8rem}
+.lean input{width:80px!important}
+textarea{font-size:13px;font-family:ui-monospace,Menlo,monospace;height:120px}
+.row{display:flex;gap:8px;flex-wrap:wrap;margin-top:8px;align-items:center}
+footer{font-size:.7rem;color:var(--sub);text-align:center;line-height:1.6;margin-top:6px}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1 id="h1">📊 選舉民調得票試算器</h1>
+  <p class="lead" id="leadSrc">輸入任何縣市、任何選舉的民調數字，換算成票數<br>試算結果只是數學換算，不代表選舉預測</p>
+
+  <!-- 0. 基本設定 -->
+  <div class="card">
+    <h2>選舉與民調</h2>
+    <div class="pills" id="presets">
+      <span style="font-size:.75rem;color:var(--sub);align-self:center">載入範例：</span>
+      <button data-p="tpe11">台北市長 2026（11 月封關）</button>
+      <button data-p="tpe10">台北市長 2026（10 月）</button>
+      <button data-p="blank2">空白・兩人對決</button>
+      <button data-p="blank3">空白・三人競選</button>
+    </div>
+    <div class="grid">
+      <div class="field"><label>選舉名稱</label><input type="text" id="title" placeholder="例：2026 台中市長選舉"></div>
+      <div class="field"><label>民調來源／說明</label><input type="text" id="source" placeholder="例：○○民調，2026/11/1–3"></div>
+      <div class="field"><label>合格選舉人數</label><input type="number" id="e" step="1" min="1"><small>請依中選會或地方選委會公告填入</small></div>
+      <div class="field"><label>樣本數（計算誤差用）</label><input type="number" id="n" step="1" min="1"></div>
+    </div>
+  </div>
+
+  <!-- 1. 候選人 -->
+  <div class="card">
+    <h2>候選人支持度與投票意願</h2>
+    <div class="tw"><table>
+      <thead><tr><th>候選人（黨籍）</th><th>色</th><th>支持度 %</th><th>一定會投 %</th><th>可能會投 %</th><th>投票機率</th><th>未明確回答流向 %</th><th></th></tr></thead>
+      <tbody id="ctab"></tbody>
+    </table></div>
+    <div class="row"><button class="btn" id="addC">＋ 新增候選人</button></div>
+    <div class="note">「一定會投／可能會投」請填各候選人支持者在「會不會去投票」交叉表裡的比例。民調沒有交叉表的話可以留空，留空時跟「未明確回答」列用同樣比例；全部留空就等於不加權。</div>
+    <div class="warn" id="supWarn" style="display:none"></div>
+
+    <h3>未明確回答者的流向</h3>
+    <div class="pills" id="alloc">
+      <button data-a="even2">平分給前兩名</button>
+      <button data-a="evenAll">所有候選人平分</button>
+      <button data-a="ratio">依支持度比例</button>
+    </div>
+    <div class="lean">
+      依民調傾向指標：未明確回答者中偏 <b id="leanA">A</b>
+      <input type="number" id="leanAv" step="0.1" placeholder="%">
+      ％、偏 <b id="leanB">B</b>
+      <input type="number" id="leanBv" step="0.1" placeholder="%">
+      ％ <button class="btn" id="leanGo">套用</button>
+    </div>
+    <div class="note">傾向指標可以用報告中「未明確回答者」對適合度、看好度、政黨輪替等題的交叉結果。套用後，未明確回答者只依比例分給前兩名。各列流向加總不是 100% 時，會自動依比例換算。</div>
+  </div>
+
+  <!-- 2. 投票意願加權 -->
+  <div class="card">
+    <h2>投票意願加權</h2>
+    <label class="chk"><input type="checkbox" id="lvOn"> 啟用（依「一定會投／可能會投」調整實際投票組成）</label>
+    <div id="lvBox" style="margin-top:12px">
+      <div class="pills" id="lvMode">
+        <button data-m="one">只計「一定會投」者</button>
+        <button data-m="three">三類加權</button>
+      </div>
+      <div class="num3">
+        <div class="field"><label>「一定會投」投票機率 %</label><input type="number" id="w1" step="1" min="0" max="100"></div>
+        <div class="field"><label>「可能會投」投票機率 %</label><input type="number" id="w2" step="1" min="0" max="100"></div>
+        <div class="field"><label>「其他」投票機率 %</label><input type="number" id="w3" step="1" min="0" max="100"></div>
+      </div>
+      <div class="note" id="lvModeNote"></div>
+      <label class="chk" style="margin-top:10px"><input type="checkbox" id="lvTurn"> 用加權推算出的投票率，取代下方的投票率滑桿</label>
+      <div class="stats">
+        <div class="stat"><div class="k">推算投票率</div><div class="x" id="lvT">-</div><div class="n">選舉人 × 各族群比例 × 投票機率</div></div>
+        <div class="stat"><div class="k">預估出門投票人數</div><div class="x" id="lvN">-</div><div class="n" id="lvN2">-</div></div>
+        <div class="stat"><div class="k">前兩名差距：加權前 → 後</div><div class="x" id="lvD">-</div><div class="n" id="lvD2">-</div></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 3. 投票率 -->
+  <div class="card">
+    <h2>投票率與廢票</h2>
+    <div class="grid">
+      <div class="field">
+        <label>投票率 <span class="v" id="tV"></span></label>
+        <input type="range" id="t" min="30" max="95" step="1">
+        <small>可參考該縣市上一屆同類選舉的實際投票率</small>
+      </div>
+      <div class="field">
+        <label>廢票率 <span class="v" id="rV"></span></label>
+        <input type="range" id="r" min="0" max="5" step="0.1">
+        <small>從候選人選票中扣除；啟用加權時，「不投票／投廢票」者如果出門投票，選票直接算成廢票</small>
+      </div>
+    </div>
+  </div>
+
+  <!-- 4. 結果 -->
+  <div class="card">
+    <h2>得票試算結果</h2>
+    <div style="font-size:.78rem;color:var(--sub)">有效票得票率</div>
+    <div class="bar" id="bar"></div>
+    <div class="cands" id="cards"></div>
+    <div class="diff"><div class="t">前兩名預估票差</div><div class="d" id="diffText">-</div></div>
+    <div class="stats">
+      <div class="stat"><div class="k">總投票數／有效票</div><div class="x" id="tot">-</div><div class="n" id="valid">-</div></div>
+      <div class="stat"><div class="k">追平門檻</div><div class="x" id="be">-</div><div class="n" id="beNote">-</div></div>
+      <div class="stat"><div class="k">民調差距誤差（95%）</div><div class="x" id="moe">-</div><div class="n" id="moeNote">-</div></div>
+    </div>
+  </div>
+
+  <!-- 5. 敏感度 -->
+  <div class="card">
+    <h2>投票率敏感度</h2>
+    <div class="tw"><table><thead id="sensH"></thead><tbody id="sens"></tbody></table></div>
+    <div class="note">這張表假設得票率不會隨投票率改變。投票率改變時投票者組成會不同，這部分要靠投票意願加權來反映。</div>
+  </div>
+
+  <!-- 6. 匯出匯入 -->
+  <div class="card">
+    <h2>儲存與分享設定</h2>
+    <div class="note" style="margin-top:0">設定會自動記在這個瀏覽器。要換裝置或傳給別人時，可以複製下方的設定碼，在別處貼上後按「套用」。</div>
+    <textarea id="cfg" spellcheck="false"></textarea>
+    <div class="row">
+      <button class="btn dark" id="cfgCopy">複製設定碼</button>
+      <button class="btn" id="cfgApply">套用貼上的設定</button>
+      <button class="btn" id="cfgReset">清除並重設</button>
+      <span class="note" id="cfgMsg" style="margin:0"></span>
+    </div>
+  </div>
+
+  <footer>計算方式：支持度 × 投票機率 → 分配未明確回答者 → 換算有效票 × 投票率。<br>單一民調有其抽樣與方法限制，建議與其他民調交叉參考。</footer>
+</div>
+
+<script>
+(function(){
+  const $=id=>document.getElementById(id);
+  const fmt=n=>Math.round(n).toLocaleString('zh-TW');
+  const pct=(x,d=1)=>(x*100).toFixed(d)+'%';
+  const f=(v,def=0)=>{const x=parseFloat(v);return isFinite(x)?x:def;};
+  const esc=s=>String(s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+  const PALETTE=['#1f8a5b','#1f6fb5','#c0392b','#8e44ad','#d68910','#16a085','#7f8c8d'];
+  const KEY='poll-calc-v1';
+
+  // ───── 範例 ─────
+  const PRESETS={
+    tpe11:{title:'2026 台北市長選舉',source:'信民兩岸研究協會封關民調（2026/11/11–13，n=1,072，±3.0%）',
+      e:2031822,n:1072,t:65,r:1.5,lvOn:true,lvMode:'one',lvTurn:false,w:[90,55,15],
+      cands:[{name:'沈伯洋（民進黨）',color:'#1f8a5b',sup:48.6,d:89.5,l:8.8,alloc:50},
+             {name:'蔣萬安（國民黨）',color:'#1f6fb5',sup:33.8,d:84.2,l:12.9,alloc:50},
+             {name:'其他候選人',color:'#9aa3b2',sup:1.1,d:91.4,l:5.9,alloc:0}],
+      und:{d:54.9,l:26.0},nv:{sup:4.5,d:7.5,l:4.6}},
+    tpe10:{title:'2026 台北市長選舉',source:'信民兩岸研究協會民調（2026/10/14–16，n=1,075，±3.0%）',
+      e:2031822,n:1075,t:65,r:1.5,lvOn:true,lvMode:'one',lvTurn:false,w:[90,55,15],
+      cands:[{name:'沈伯洋（民進黨）',color:'#1f8a5b',sup:50.3,d:89.9,l:7.5,alloc:50},
+             {name:'蔣萬安（國民黨）',color:'#1f6fb5',sup:33.3,d:84.3,l:12.5,alloc:50},
+             {name:'其他候選人',color:'#9aa3b2',sup:1.3,d:33.4,l:62.7,alloc:0}],
+      und:{d:47.4,l:32.9},nv:{sup:3.0,d:7.7,l:7.6}},
+    blank2:{title:'',source:'',e:'',n:1068,t:60,r:1.5,lvOn:false,lvMode:'one',lvTurn:false,w:[90,55,15],
+      cands:[{name:'候選人 A',color:PALETTE[0],sup:'',d:'',l:'',alloc:50},
+             {name:'候選人 B',color:PALETTE[1],sup:'',d:'',l:'',alloc:50}],
+      und:{d:'',l:''},nv:{sup:'',d:'',l:''}},
+    blank3:{title:'',source:'',e:'',n:1068,t:60,r:1.5,lvOn:false,lvMode:'one',lvTurn:false,w:[90,55,15],
+      cands:[{name:'候選人 A',color:PALETTE[0],sup:'',d:'',l:'',alloc:40},
+             {name:'候選人 B',color:PALETTE[1],sup:'',d:'',l:'',alloc:40},
+             {name:'候選人 C',color:PALETTE[2],sup:'',d:'',l:'',alloc:20}],
+      und:{d:'',l:''},nv:{sup:'',d:'',l:''}}
+  };
+
+  let S;
+  const clone=o=>JSON.parse(JSON.stringify(o));
+
+  // ───── 候選人表格 ─────
+  function renderTable(){
+    const rows=S.cands.map((c,i)=>`<tr>
+      <td><input type="text" data-i="${i}" data-k="name" value="${esc(c.name)}"></td>
+      <td><input type="color" data-i="${i}" data-k="color" value="${esc(c.color)}"></td>
+      <td><input type="number" step="0.1" data-i="${i}" data-k="sup" value="${c.sup}"></td>
+      <td><input type="number" step="0.1" data-i="${i}" data-k="d" value="${c.d}" placeholder="—"></td>
+      <td><input type="number" step="0.1" data-i="${i}" data-k="l" value="${c.l}" placeholder="—"></td>
+      <td id="p${i}">-</td>
+      <td><input type="number" step="0.1" data-i="${i}" data-k="alloc" value="${c.alloc}"></td>
+      <td>${S.cands.length>2?`<button class="del" data-del="${i}" title="刪除">✕</button>`:''}</td></tr>`).join('');
+    const fixed=`
+      <tr class="fixed"><td>未明確回答</td><td></td><td id="undSup">-</td>
+        <td><input type="number" step="0.1" data-g="und" data-k="d" value="${S.und.d}" placeholder="—"></td>
+        <td><input type="number" step="0.1" data-g="und" data-k="l" value="${S.und.l}" placeholder="—"></td>
+        <td id="pU">-</td><td>（依上方流向分配）</td><td></td></tr>
+      <tr class="fixed"><td>不投票／投廢票</td><td></td>
+        <td><input type="number" step="0.1" data-g="nv" data-k="sup" value="${S.nv.sup}"></td>
+        <td><input type="number" step="0.1" data-g="nv" data-k="d" value="${S.nv.d}" placeholder="—"></td>
+        <td><input type="number" step="0.1" data-g="nv" data-k="l" value="${S.nv.l}" placeholder="—"></td>
+        <td id="pN">-</td><td>不分配</td><td></td></tr>`;
+    $('ctab').innerHTML=rows+fixed;
+  }
+
+  $('ctab').addEventListener('input',ev=>{
+    const el=ev.target, k=el.dataset.k; if(!k) return;
+    const v = (k==='name'||k==='color') ? el.value : el.value;
+    if (el.dataset.i!==undefined) S.cands[+el.dataset.i][k]=v;
+    else S[el.dataset.g][k]=v;
+    if (k==='alloc') markAlloc(null);
+    if (k==='sup' && S.allocKey==='ratio') applyAlloc('ratio',false);
+    clearPreset(); calc();
+  });
+  $('ctab').addEventListener('click',ev=>{
+    const i=ev.target.dataset.del; if(i===undefined) return;
+    S.cands.splice(+i,1); renderTable(); clearPreset(); calc();
+  });
+  $('addC').onclick=()=>{
+    const used=S.cands.map(c=>c.color);
+    S.cands.push({name:'候選人 '+String.fromCharCode(65+S.cands.length),color:PALETTE.find(c=>!used.includes(c))||'#7f8c8d',sup:'',d:'',l:'',alloc:0});
+    renderTable(); clearPreset(); calc();
+  };
+
+  // ───── 未明確回答流向 ─────
+  function rankIdx(){ return S.cands.map((c,i)=>[f(c.sup),i]).sort((a,b)=>b[0]-a[0]).map(x=>x[1]); }
+  function markAlloc(k){ S.allocKey=k; document.querySelectorAll('#alloc button').forEach(b=>b.classList.toggle('on',b.dataset.a===k)); }
+  function applyAlloc(k,rerender=true){
+    const n=S.cands.length, r=rankIdx();
+    if (k==='even2') S.cands.forEach((c,i)=>c.alloc = (i===r[0]||i===r[1]) ? 50 : 0);
+    if (k==='evenAll') S.cands.forEach(c=>c.alloc=+(100/n).toFixed(2));
+    if (k==='ratio'){ const tot=S.cands.reduce((a,c)=>a+f(c.sup),0)||1; S.cands.forEach(c=>c.alloc=+(f(c.sup)/tot*100).toFixed(2)); }
+    markAlloc(k);
+    if (rerender) renderTable(); else S.cands.forEach((c,i)=>{const el=document.querySelector(`[data-i="${i}"][data-k="alloc"]`); if(el) el.value=c.alloc;});
+  }
+  document.querySelectorAll('#alloc button').forEach(b=>b.onclick=()=>{applyAlloc(b.dataset.a);calc();});
+  $('leanGo').onclick=()=>{
+    const a=f($('leanAv').value,NaN), b=f($('leanBv').value,NaN);
+    if(!(a>=0&&b>=0&&a+b>0)) return;
+    const r=rankIdx();
+    S.cands.forEach((c,i)=>c.alloc = i===r[0] ? +(a/(a+b)*100).toFixed(2) : i===r[1] ? +(b/(a+b)*100).toFixed(2) : 0);
+    markAlloc(null); renderTable(); calc();
+  };
+
+  // ───── 計算 ─────
+  function prop(d,l,fallback,w){
+    // d、l 空白時採用 fallback（未明確回答列）；仍空白則視為不加權
+    let D=f(d,NaN), L=f(l,NaN);
+    if (!isFinite(D)&&!isFinite(L)&&fallback){ D=f(fallback.d,NaN); L=f(fallback.l,NaN); }
+    if (!isFinite(D)&&!isFinite(L)) return null;
+    D=Math.min(100,Math.max(0,D||0)); L=Math.min(100-D,Math.max(0,L||0));
+    return (D*w[0]+L*w[1]+(100-D-L)*w[2])/10000;
+  }
+
+  function model(P){
+    const sups=S.cands.map(c=>f(c.sup)), nv=f(S.nv.sup);
+    const und=Math.max(0,100-sups.reduce((a,b)=>a+b,0)-nv);
+    const allocs=S.cands.map(c=>Math.max(0,f(c.alloc))), at=allocs.reduce((a,b)=>a+b,0);
+    const Uw=und*P.u, Nw=nv*P.n;
+    const W=sups.map((s,i)=>s*P.c[i]);
+    const C=W.map((w,i)=>w + (at>0 ? Uw*allocs[i]/at : 0));
+    const cand=C.reduce((a,b)=>a+b,0)||1;
+    return {sh:C.map(x=>x/cand), W, Uw, Nw, und, cand, implied:(cand+Nw)/100, sumSup:sups.reduce((a,b)=>a+b,0)+nv, at};
+  }
+
+  function calc(){
+    S.title=$('title').value; S.source=$('source').value;
+    S.e=$('e').value; S.n=$('n').value; S.t=+$('t').value; S.r=+$('r').value;
+    S.lvOn=$('lvOn').checked; S.lvTurn=$('lvTurn').checked;
+    S.w=[f($('w1').value,90),f($('w2').value,55),f($('w3').value,15)];
+
+    $('h1').textContent='📊 '+(S.title||'選舉民調得票試算器');
+    $('leadSrc').innerHTML=(S.source?esc(S.source)+'<br>':'輸入任何縣市、任何選舉的民調數字，換算成票數<br>')+'試算結果只是數學換算，不代表選舉預測';
+    document.title=(S.title||'選舉民調')+'・得票試算';
+
+    const e=f(S.e,0), n=f(S.n,1000), r=S.r/100, lv=S.lvOn, lvTurn=lv&&S.lvTurn, one=S.lvMode==='one';
+    $('lvBox').classList.toggle('off',!lv);
+    $('t').disabled=lvTurn;
+    $('w2').disabled=one; $('w3').disabled=one;
+    document.querySelectorAll('#lvMode button').forEach(b=>b.classList.toggle('on',b.dataset.m===S.lvMode));
+    $('lvModeNote').textContent= one
+      ? '擇一模式：只有回答「一定會投」的人計入，每人用第一格的機率折算；「可能會投」和「其他」不計入。'
+      : '三類加權：每位受訪者只屬於其中一類，族群投票機率＝各類比例 × 該類機率的加權平均，不會重複計算。';
+    const wt=[S.w[0], one?0:S.w[1], one?0:S.w[2]];
+
+    // 投票機率
+    const pu=prop(S.und.d,S.und.l,null,wt);
+    const pc=S.cands.map(c=>prop(c.d,c.l,S.und,wt));
+    const pn=prop(S.nv.d,S.nv.l,null,wt);
+    const allNull = pu===null && pc.every(p=>p===null);
+    const P = lv && !allNull
+      ? {c:pc.map(p=>p===null?1:p), u:pu===null?1:pu, n:pn===null?0:pn}
+      : {c:pc.map(()=>1), u:1, n:0};
+    S.cands.forEach((c,i)=>{ const el=$('p'+i); if(el) el.textContent = lv&&pc[i]!==null ? pct(pc[i]) : '—'; });
+    $('pU').textContent= lv&&pu!==null ? pct(pu) : '—';
+    $('pN').textContent= lv&&pn!==null ? pct(pn) : '—';
+
+    const base=model({c:S.cands.map(()=>1),u:1,n:0});
+    const M= lv ? model(P) : base;
+    $('undSup').textContent=M.und.toFixed(1);
+
+    const sw=$('supWarn');
+    if (M.sumSup>100.05){ sw.style.display='block'; sw.textContent=`支持度＋不投票合計 ${M.sumSup.toFixed(1)}%，超過 100%，請檢查。`; }
+    else if (M.und>0 && M.at<=0){ sw.style.display='block'; sw.textContent='未明確回答者的流向全部是 0，這群人不會分配給任何人。'; }
+    else if (lv && allNull){ sw.style.display='block'; sw.textContent='尚未填入投票意願，加權暫時不起作用。'; }
+    else sw.style.display='none';
+
+    const t = lvTurn ? M.implied : S.t/100;
+    $('tV').textContent=(t*100).toFixed(lvTurn?1:0)+'%'+(lvTurn?'（推算）':'');
+    $('rV').textContent=(r*100).toFixed(1)+'%';
+
+    const ratio = lv ? M.cand/(M.cand+M.Nw) : 1;
+    const total=e*t, valid=total*ratio*(1-r);
+    const votes=M.sh.map(s=>valid*s);
+    const order=M.sh.map((s,i)=>[s,i]).sort((a,b)=>b[0]-a[0]).map(x=>x[1]);
+    const A=order[0], B=order[1];
+
+    // 長條與卡片
+    $('bar').innerHTML=order.map(i=>`<div style="width:${M.sh[i]*100}%;background:${esc(S.cands[i].color)}">${M.sh[i]>0.06?pct(M.sh[i]):''}</div>`).join('');
+    $('cards').innerHTML=order.map((i,k)=>`<div class="cand" style="border-color:${esc(S.cands[i].color)};background:${esc(S.cands[i].color)}14">
+      <div class="name">${k+1}. ${esc(S.cands[i].name||'（未命名）')}</div>
+      <div class="votes" style="color:${esc(S.cands[i].color)}">${e?fmt(votes[i])+' 票':'—'}</div>
+      <div class="pct">有效票 ${pct(M.sh[i],2)}</div></div>`).join('');
+
+    const nm=i=>esc(S.cands[i]?.name||'—');
+    const d=votes[A]-(B!==undefined?votes[B]:0), gapPt=(M.sh[A]-(B!==undefined?M.sh[B]:0))*100;
+    $('diffText').textContent = B===undefined ? '—' : gapPt<0.005 ? '前兩名平手'
+      : `${S.cands[A].name} 領先 ${S.cands[B].name} ${e?fmt(d)+' 票':''}（${gapPt.toFixed(2)} 個百分點）`;
+
+    $('tot').textContent= e ? fmt(total)+' 票' : '請填選舉人數';
+    $('valid').textContent= e ? `有效票 ${fmt(valid)} 票（廢票約 ${fmt(total-valid)}）` : '—';
+
+    // 追平門檻：未明確回答者只分給前兩名時，第二名需拿下的比例
+    const be=$('be');
+    if (B===undefined || M.Uw<=0){ be.textContent='—'; $('beNote').textContent='沒有未明確回答者可分配'; }
+    else {
+      const need=(M.W[A]-M.W[B]+M.Uw)/(2*M.Uw);
+      be.textContent = need<=0 ? '已領先' : need>=1 ? '全拿仍落後' : pct(need);
+      $('beNote').innerHTML=`假設未明確回答者只投給前兩名，${nm(B)} 需拿下多少比例才能追平 ${nm(A)}`;
+    }
+
+    // 誤差（同一樣本兩比例差）
+    const sA=f(S.cands[A]?.sup)/100, sB=B!==undefined?f(S.cands[B].sup)/100:0;
+    const moe=1.96*Math.sqrt(Math.max(0,sA+sB-(sA-sB)**2)/n), gap=Math.abs(sA-sB);
+    $('moe').textContent='±'+(moe*100).toFixed(1)+' 點';
+    $('moeNote').textContent=`前兩名民調原始差距 ${(gap*100).toFixed(1)} 點：`+(gap>moe?'超出誤差範圍':'在誤差範圍內，統計上無法區分');
+
+    // 加權統計
+    if (lv && !allNull){
+      const lead=(m)=>{const g=(m.sh[A]-m.sh[B])*100; return (g>=0?'+':'')+g.toFixed(2)+' 點';};
+      $('lvT').textContent=pct(M.implied);
+      $('lvN').textContent= e ? fmt(e*M.implied)+' 人' : '—';
+      $('lvN2').textContent= e ? S.cands.map((c,i)=>`${c.name} ${fmt(e*M.W[i]/100)}`).join('、')+`、未明確回答 ${fmt(e*M.Uw/100)}` : '請填選舉人數';
+      $('lvD').textContent= B===undefined?'—':lead(M);
+      $('lvD2').textContent= B===undefined?'—':`${S.cands[A].name} 對 ${S.cands[B].name}；加權前 ${lead(base)}`;
+    } else {
+      ['lvT','lvN','lvD'].forEach(id=>$(id).textContent='—');
+      ['lvN2','lvD2'].forEach(id=>$(id).textContent= lv?'尚未填入投票意願':'尚未啟用');
+    }
+
+    // 敏感度表
+    $('sensH').innerHTML='<tr><th>投票率</th><th>有效票</th>'+order.map(i=>`<th style="color:${esc(S.cands[i].color)}">${esc(S.cands[i].name)}</th>`).join('')+'<th>前兩名票差</th></tr>';
+    let rows=''; const curT=Math.round(t*100);
+    const row=(label,v,cls)=>`<tr${cls?' class="cur"':''}><td>${label}</td><td>${fmt(v)}</td>`+order.map(i=>`<td>${fmt(v*M.sh[i])}</td>`).join('')+`<td>${B===undefined?'—':fmt(v*(M.sh[A]-M.sh[B]))}</td></tr>`;
+    if (e){
+      for (let tt=40; tt<=90; tt+=5) rows+=row(tt+'%', e*tt/100*ratio*(1-r), curT===tt&&!lvTurn);
+      if (lvTurn || curT%5!==0 || curT<40 || curT>90) rows+=row((t*100).toFixed(lvTurn?1:0)+'%（目前）', valid, true);
+    } else rows='<tr><td colspan="9" style="text-align:center;color:#999">請先填入合格選舉人數</td></tr>';
+    $('sens').innerHTML=rows;
+
+    save();
+  }
+
+  // ───── 狀態載入／儲存 ─────
+  function load(st){
+    S=clone(st); S.allocKey=S.allocKey||null;
+    $('title').value=S.title||''; $('source').value=S.source||'';
+    $('e').value=S.e; $('n').value=S.n; $('t').value=S.t; $('r').value=S.r;
+    $('lvOn').checked=!!S.lvOn; $('lvTurn').checked=!!S.lvTurn; S.lvMode=S.lvMode||'one';
+    $('w1').value=S.w[0]; $('w2').value=S.w[1]; $('w3').value=S.w[2];
+    $('leanAv').value=''; $('leanBv').value='';
+    markAlloc(S.allocKey);
+    renderTable(); calc();
+  }
+  function save(){
+    const txt=JSON.stringify(S);
+    if (document.activeElement!==$('cfg')) $('cfg').value=JSON.stringify(S,null,1);
+    try{ localStorage.setItem(KEY,txt); }catch(_){}
+    const r=rankIdx(); $('leanA').textContent=S.cands[r[0]]?.name||'A'; $('leanB').textContent=S.cands[r[1]]?.name||'B';
+  }
+  function clearPreset(){ document.querySelectorAll('#presets button').forEach(b=>b.classList.remove('on')); }
+  function setPreset(k){ load(PRESETS[k]); document.querySelectorAll('#presets button').forEach(b=>b.classList.toggle('on',b.dataset.p===k)); }
+
+  document.querySelectorAll('#presets button').forEach(b=>b.onclick=()=>setPreset(b.dataset.p));
+  document.querySelectorAll('#lvMode button').forEach(b=>b.onclick=()=>{S.lvMode=b.dataset.m;calc();});
+  ['title','source','e','n','t','r','w1','w2','w3'].forEach(id=>$(id).addEventListener('input',()=>{ if(!['t','r'].includes(id)) clearPreset(); calc(); }));
+  ['lvOn','lvTurn'].forEach(id=>$(id).addEventListener('change',calc));
+
+  const msg=t=>{$('cfgMsg').textContent=t; setTimeout(()=>$('cfgMsg').textContent='',2500);};
+  $('cfgCopy').onclick=async()=>{
+    try{ await navigator.clipboard.writeText($('cfg').value); msg('已複製'); }
+    catch(_){ $('cfg').select(); msg('請手動複製選取的文字'); }
+  };
+  $('cfgApply').onclick=()=>{
+    try{
+      const o=JSON.parse($('cfg').value);
+      if(!Array.isArray(o.cands)||o.cands.length<2) throw 0;
+      o.und=o.und||{d:'',l:''}; o.nv=o.nv||{sup:'',d:'',l:''}; o.w=o.w||[90,55,15];
+      load(o); clearPreset(); msg('已套用');
+    }catch(_){ msg('設定碼格式不正確'); }
+  };
+  $('cfgReset').onclick=()=>{ try{localStorage.removeItem(KEY);}catch(_){} setPreset('blank2'); msg('已重設'); };
+
+  // 啟動：先讀上次設定，沒有就載入台北範例
+  let saved=null;
+  try{ saved=JSON.parse(localStorage.getItem(KEY)||'null'); }catch(_){}
+  if (saved && Array.isArray(saved.cands) && saved.cands.length>=2) load(saved); else setPreset('tpe11');
+})();
+
+// PWA：註冊離線快取（不支援的環境略過）
+if ('serviceWorker' in navigator && location.protocol === 'https:') {
+  window.addEventListener('load', () => {
+    navigator.serviceWorker.register('sw.js').catch(() => {});
+  });
+}
+</script>
+</body>
+</html>

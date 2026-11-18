@@ -1,0 +1,15 @@
+{
+  "name": "選舉民調得票試算器",
+  "short_name": "選情試算",
+  "description": "把任何縣市、任何選舉的民調支持度與投票意願換算成票數",
+  "lang": "zh-TW",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "background_color": "#f5f6f8",
+  "theme_color": "#1c2230",
+  "icons": [
+    { "src": "icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any maskable" },
+    { "src": "icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any maskable" }
+  ]
+}
