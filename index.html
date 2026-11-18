@@ -77,6 +77,9 @@ tr.fixed td{background:#fafbfc}
 .lean input{width:80px!important}
 textarea{font-size:13px;font-family:ui-monospace,Menlo,monospace;height:120px}
 .row{display:flex;gap:8px;flex-wrap:wrap;margin-top:8px;align-items:center}
+.pie-wrap{display:flex;justify-content:center;margin-top:4px}
+#pie{width:100%;max-width:440px;height:auto;border:1px solid var(--line);border-radius:12px;background:#fff}
+.btn.line{background:#06c755;color:#fff;border-color:#06c755}
 footer{font-size:.7rem;color:var(--sub);text-align:center;line-height:1.6;margin-top:6px}
 </style>
 </head>
@@ -178,6 +181,15 @@ footer{font-size:.7rem;color:var(--sub);text-align:center;line-height:1.6;margin
     <div class="bar" id="bar"></div>
     <div class="cands" id="cards"></div>
     <div class="diff"><div class="t">前兩名預估票差</div><div class="d" id="diffText">-</div></div>
+
+    <h3>圓形圖</h3>
+    <div class="pie-wrap"><canvas id="pie" width="1080" height="1080" aria-label="得票率圓形圖"></canvas></div>
+    <div class="row" style="justify-content:center">
+      <button class="btn dark" id="dlPng">⬇ 下載圖片</button>
+      <button class="btn" id="shareImg">📤 分享圖片（可選 LINE）</button>
+      <button class="btn line" id="shareLine">LINE 分享文字</button>
+    </div>
+    <div class="note" id="shareMsg" style="text-align:center;min-height:1.2em"></div>
     <div class="stats">
       <div class="stat"><div class="k">總投票數／有效票</div><div class="x" id="tot">-</div><div class="n" id="valid">-</div></div>
       <div class="stat"><div class="k">追平門檻</div><div class="x" id="be">-</div><div class="n" id="beNote">-</div></div>
@@ -435,8 +447,123 @@ footer{font-size:.7rem;color:var(--sub);text-align:center;line-height:1.6;margin
     } else rows='<tr><td colspan="9" style="text-align:center;color:#999">請先填入合格選舉人數</td></tr>';
     $('sens').innerHTML=rows;
 
+    lastResult={
+      title:S.title||'選舉民調得票試算', source:S.source||'',
+      items:order.map(i=>({name:S.cands[i].name||'（未命名）', color:S.cands[i].color, share:M.sh[i], votes:votes[i]})),
+      hasE:!!e, valid, turnout:(t*100).toFixed(lvTurn?1:0)+'%'+(lvTurn?'（推算）':''),
+      diff:$('diffText').textContent, lv:lv&&!allNull,
+      diff1: B===undefined ? '' : gapPt<0.005 ? '前兩名平手' : `${S.cands[A].name} 領先 ${S.cands[B].name}`,
+      diff2: B===undefined || gapPt<0.005 ? '' : `${e?fmt(d)+' 票，':''}差 ${gapPt.toFixed(2)} 個百分點`
+    };
+    drawPie(lastResult);
     save();
   }
+
+  // ───── 圓形圖圖卡 ─────
+  let lastResult=null;
+  const FONT='-apple-system,BlinkMacSystemFont,"PingFang TC","Noto Sans TC","Microsoft JhengHei",sans-serif';
+  function fitText(ctx,text,maxW){
+    if (ctx.measureText(text).width<=maxW) return text;
+    let s=text; while(s.length>1 && ctx.measureText(s+'…').width>maxW) s=s.slice(0,-1);
+    return s+'…';
+  }
+  function drawPie(R){
+    const cv=$('pie'), W=1080, n=R.items.length;
+    const legendTop=930, rowH=64, H=legendTop+n*rowH+220;
+    if (cv.height!==H) cv.height=H;
+    const ctx=cv.getContext('2d'); if(!ctx) return;
+    ctx.fillStyle='#ffffff'; ctx.fillRect(0,0,W,H);
+    ctx.fillStyle='#1c2230'; ctx.fillRect(0,0,W,14);
+
+    ctx.textAlign='center'; ctx.textBaseline='alphabetic';
+    ctx.fillStyle='#1c2230'; ctx.font=`800 54px ${FONT}`;
+    ctx.fillText(fitText(ctx,R.title,W-120),W/2,104);
+    ctx.fillStyle='#5d6677'; ctx.font=`400 28px ${FONT}`;
+    ctx.fillText(fitText(ctx,R.source||'得票試算結果',W-120),W/2,152);
+
+    // 甜甜圈
+    const cx=W/2, cy=540, RO=310, RI=175;
+    const sum=R.items.reduce((a,b)=>a+b.share,0);
+    let a0=-Math.PI/2;
+    if (sum<=0){
+      ctx.fillStyle='#eceef2'; ctx.beginPath(); ctx.arc(cx,cy,RO,0,Math.PI*2); ctx.arc(cx,cy,RI,0,Math.PI*2,true); ctx.fill();
+    } else R.items.forEach(it=>{
+      const a1=a0+it.share/sum*Math.PI*2;
+      ctx.beginPath(); ctx.arc(cx,cy,RO,a0,a1); ctx.arc(cx,cy,RI,a1,a0,true); ctx.closePath();
+      ctx.fillStyle=it.color; ctx.fill();
+      ctx.strokeStyle='#fff'; ctx.lineWidth=4; ctx.stroke();
+      if (it.share>=0.045){
+        const am=(a0+a1)/2, rr=(RO+RI)/2;
+        ctx.fillStyle='#fff'; ctx.font=`800 36px ${FONT}`; ctx.textBaseline='middle';
+        ctx.fillText((it.share*100).toFixed(1)+'%',cx+Math.cos(am)*rr,cy+Math.sin(am)*rr);
+      }
+      a0=a1;
+    });
+    ctx.textBaseline='middle';
+    ctx.fillStyle='#5d6677'; ctx.font=`600 30px ${FONT}`;
+    ctx.fillText(R.hasE?'有效票':'有效票得票率',cx,cy-34);
+    ctx.fillStyle='#1c2230'; ctx.font=`800 ${R.hasE?50:44}px ${FONT}`;
+    ctx.fillText(R.hasE?fmt(R.valid):'—',cx,cy+22);
+    if (R.hasE){ ctx.fillStyle='#5d6677'; ctx.font=`400 26px ${FONT}`; ctx.fillText('票',cx,cy+70); }
+
+    // 圖例
+    ctx.textBaseline='middle';
+    R.items.forEach((it,k)=>{
+      const y=legendTop+k*rowH;
+      ctx.fillStyle=it.color; ctx.beginPath(); ctx.roundRect?ctx.roundRect(90,y-18,36,36,8):ctx.rect(90,y-18,36,36); ctx.fill();
+      ctx.textAlign='left'; ctx.fillStyle='#1c2230'; ctx.font=`700 34px ${FONT}`;
+      ctx.fillText(fitText(ctx,`${k+1}. ${it.name}`,470),146,y);
+      ctx.textAlign='right'; ctx.font=`800 34px ${FONT}`; ctx.fillStyle=it.color;
+      ctx.fillText((it.share*100).toFixed(2)+'%',760,y);
+      ctx.fillStyle='#5d6677'; ctx.font=`600 30px ${FONT}`;
+      ctx.fillText(R.hasE?fmt(it.votes)+' 票':'',990,y);
+    });
+
+    // 票差與註記
+    const yD=legendTop+n*rowH+30;
+    ctx.textAlign='center'; ctx.fillStyle='#c47f00'; ctx.font=`800 34px ${FONT}`;
+    ctx.fillText(fitText(ctx,R.diff1,W-120),W/2,yD);
+    ctx.font=`700 30px ${FONT}`;
+    ctx.fillText(fitText(ctx,R.diff2,W-120),W/2,yD+48);
+    ctx.fillStyle='#8a92a3'; ctx.font=`400 24px ${FONT}`;
+    ctx.fillText(fitText(ctx,`投票率 ${R.turnout}${R.lv?'｜已含投票意願加權':''}｜試算結果只是數學換算，不代表選舉預測`,W-80),W/2,yD+108);
+  }
+
+  const shareMsg=t=>{ $('shareMsg').textContent=t; clearTimeout(shareMsg.tm); shareMsg.tm=setTimeout(()=>$('shareMsg').textContent='',4000); };
+  const fileName=()=>((lastResult&&lastResult.title)||'選舉試算').replace(/[\\/:*?"<>|\s]+/g,'_')+'.png';
+  const pngBlob=()=>new Promise(res=>$('pie').toBlob(b=>res(b),'image/png'));
+
+  function downloadBlob(blob){
+    const url=URL.createObjectURL(blob), a=document.createElement('a');
+    a.href=url; a.download=fileName(); document.body.appendChild(a); a.click(); a.remove();
+    setTimeout(()=>URL.revokeObjectURL(url),4000);
+  }
+  $('dlPng').onclick=async()=>{
+    try{ const b=await pngBlob(); if(!b) throw 0; downloadBlob(b); shareMsg('已下載圖片；iPhone 會先開預覽，長按圖片可存到照片'); }
+    catch(_){ shareMsg('這個環境無法下載，請在瀏覽器中開啟本頁'); }
+  };
+  $('shareImg').onclick=async()=>{
+    try{
+      const b=await pngBlob(); if(!b) throw 0;
+      const file=new File([b],fileName(),{type:'image/png'});
+      if (navigator.canShare && navigator.canShare({files:[file]})){
+        await navigator.share({files:[file], title:lastResult.title});
+        shareMsg('');
+      } else { downloadBlob(b); shareMsg('這個瀏覽器不支援直接分享圖片，已改為下載，可再從相簿傳到 LINE'); }
+    }catch(err){ if(err && err.name==='AbortError') return; shareMsg('分享失敗，請改用「下載圖片」'); }
+  };
+  $('shareLine').onclick=()=>{
+    if(!lastResult) return;
+    const R=lastResult;
+    const lines=[`📊 ${R.title}`];
+    if (R.source) lines.push(R.source);
+    R.items.forEach((it,k)=>lines.push(`${k+1}. ${it.name}：${(it.share*100).toFixed(2)}%`+(R.hasE?`（${fmt(it.votes)} 票）`:'')));
+    lines.push(R.diff, `投票率 ${R.turnout}${R.lv?'，已含投票意願加權':''}`, '※ 試算結果只是數學換算，不代表選舉預測');
+    if (/^https:/.test(location.href) && location.hostname.endsWith('github.io')) lines.push(location.origin+location.pathname);
+    const url='https://line.me/R/share?text='+encodeURIComponent(lines.join('\n'));
+    const w=window.open(url,'_blank');
+    if(!w) location.href=url;
+  };
 
   // ───── 狀態載入／儲存 ─────
   function load(st){
